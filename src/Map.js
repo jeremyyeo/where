@@ -18,6 +18,8 @@ const Wrapper = styled.div`
   height: ${props => props.height};
 `;
 
+const mapProvider =
+  "https://api.mapbox.com/styles/v1/jeremyyeo/cjudgff9y1ns31fqd2oq29ark/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiamVyZW15eWVvIiwiYSI6ImNqdWRnNmNqaTBrbWM0MHBhN2szMHpiOGsifQ.vVwACv-KjPDdi5Bo7GrjKA";
 class Map extends React.Component {
   state = {
     location: { lat: -41.301907, long: 174.774041 },
@@ -35,7 +37,7 @@ class Map extends React.Component {
       zoomControl: false
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer(mapProvider, {
       detectRetina: true,
       maxZoom: 19
     }).addTo(this.map);
@@ -45,21 +47,27 @@ class Map extends React.Component {
       .bindTooltip("Wellington");
   }
 
+  updateState(busInfo) {
+    this.setState();
+  }
+
   componentDidMount() {
     let { lat, long } = this.state.location;
     this.resetMap(lat, long);
     let markings = 0;
+    this.markingsGroup = L.featureGroup();
 
     setInterval(async () => {
-      if (markings > 200) {
-        this.resetMap(lat, long);
+      if (this.map.hasLayer(this.markingsGroup) && markings > 1000) {
+        this.map.removeLayer(this.markingsGroup);
+        this.markingsGroup.clearLayers();
         markings = 0;
       }
       let allBusses = await latestBusLocations();
       try {
         this.setState({ activeBusses: allBusses.length, busInfo: allBusses });
         for (var i = 0; i < allBusses.length; i++) {
-          let busDelayMins = allBusses[i][2] / 60;
+          let busDelayMins = allBusses[i].delaySeconds / 60;
           let busDelayString;
           // prettier-ignore
           if (busDelayMins > 0) {
@@ -70,19 +78,23 @@ class Map extends React.Component {
             busDelayString = "on time";
           }
 
-          L.marker([allBusses[i][0], allBusses[i][1]], {
-            icon: busDelayMins >= 0 ? greenIcon : redIcon
+          L.circle(allBusses[i].latLong, {
+            color: busDelayMins >= 0 ? "green" : "red",
+            radius: 25
           })
             .bindTooltip(
-              `Bus ${allBusses[i][3]} is ${busDelayString} <br/> heading ${
-                allBusses[i][4]
-              } to ${allBusses[i][5]}.`
+              `Bus ${allBusses[i].serviceID} (${
+                allBusses[i].vehicleRef
+              }) is ${busDelayString} <br/> heading ${
+                allBusses[i].direction
+              } to ${allBusses[i].destination}.`
             )
-            .addTo(this.map);
+            .addTo(this.markingsGroup);
           markings += 1;
         }
       } catch (error) {}
-    }, 1000);
+      this.map.addLayer(this.markingsGroup);
+    }, 5000);
   }
 
   render() {

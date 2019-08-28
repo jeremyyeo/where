@@ -14,27 +14,27 @@ function sleep(ms) {
 export async function latestBusLocations() {
   try {
     let response = await fetch(
-      "https://cors.io/?https://www.metlink.org.nz/api/v1/ServiceLocation/3"
+      "https://cors-anywhere.herokuapp.com/https://www.metlink.org.nz/api/v1/ServiceLocation/3"
     );
     let data = await response.json();
     let services = data.Services;
-    await sleep(1000);
-    response = await fetch(
-      "https://cors.io/?https://www.metlink.org.nz/api/v1/ServiceLocation/27"
-    );
-    data = await response.json();
-    let services2 = data.Services;
-    for (var i = 0; i < services2.length; i++) {
-      services.push(services2[i]);
-    }
-    const serviceDetails = services.map(service => [
-      +service.Lat,
-      +service.Long,
-      +service.DelaySeconds,
-      +service.ServiceID,
-      service.Direction,
-      service.DestinationStopName
-    ]);
+    // await sleep(1000);
+    // response = await fetch(
+    //   "https://cors-anywhere.herokuapp.com/https://www.metlink.org.nz/api/v1/ServiceLocation/27"
+    // );
+    // data = await response.json();
+    // let services2 = data.Services;
+    // for (var i = 0; i < services2.length; i++) {
+    //   services.push(services2[i]);
+    // }
+    const serviceDetails = services.map(service => ({
+      vehicleRef: +service.VehicleRef,
+      serviceID: +service.ServiceID,
+      latLong: [+service.Lat, +service.Long],
+      delaySeconds: +service.DelaySeconds,
+      direction: service.Direction,
+      destination: service.DestinationStopName
+    }));
     return serviceDetails;
   } catch (error) {
     return "An error occured.";
